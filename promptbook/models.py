@@ -31,6 +31,7 @@ class Category(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     modified_at = models.DateTimeField(auto_now=True)
     help_text = models.CharField(max_length=255)
+    pinned_by = models.ManyToManyField(User, related_name='pinned_categories', blank=True, default=False)
 
     def __str__(self):
         return self.name
@@ -38,7 +39,7 @@ class Category(models.Model):
 
 class Prompt(models.Model):
     text = models.TextField()
-    category = models.ForeignKey(Category, on_delete=models.DO_NOTHING)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     modified_at = models.DateTimeField(auto_now=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -68,7 +69,7 @@ class Label(models.Model):
 
 
 class PromptLabel(models.Model):
-    label = models.ForeignKey(Label, on_delete=models.DO_NOTHING)
+    label = models.ForeignKey(Label, on_delete=models.CASCADE)
     prompt = models.ForeignKey(Prompt, on_delete=models.CASCADE)
 
     def __str__(self):

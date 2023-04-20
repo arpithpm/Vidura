@@ -18,6 +18,7 @@ urlpatterns = [
     path('', views.activity_stream, name='index'),
     path('upload_avatar/', views.upload_avatar, name='upload_avatar'),
     path('create_category/', views.create_category, name='create_category'),
+    path('toggle_pin_category/<int:category_id>/', views.toggle_pin_category, name='toggle_pin_category'),
 ]
 
 api_urls = [

@@ -11,7 +11,7 @@ from django.http import JsonResponse, HttpResponseRedirect, HttpResponseBadReque
 from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models import Q, F, BooleanField, ExpressionWrapper
 from django.db.models import Count, Max
 from django.contrib.contenttypes.models import ContentType
 from django.db.models.functions import Cast
@@ -32,17 +32,22 @@ class PrompVisibility(Enum):
 @login_required(login_url='/login/')
 def list_categories(request):
     user = request.user
+    user_pinned_categories = request.user.pinned_categories.all()
     # Only get categories of user
     categories = Category.objects.all().annotate(
         num_prompts=Count('prompt', filter=Q(prompt__owner=user)),
         last_updated=Max('prompt__modified_at', filter=Q(prompt__owner=user))
     )
 
+    for category in categories:
+        # check if the current user has pinned this category
+        category.is_pinned = category in user_pinned_categories
+
     # Get two most recent prompts for each category
     for category in categories:
         category.recent_prompts = category.prompt_set.filter(owner=user).order_by('-modified_at')[:2]
 
-    context = {'categories': categories}
+    context = {'categories': categories, 'pinned_categories_count': user_pinned_categories.count()}
     return render(request, 'list_categories.html', context)
 
 @login_required(login_url='/login/')
@@ -247,6 +252,25 @@ def toggle_prompt_public(request, prompt_id):
             return JsonResponse({'success': False, 'error': 'Prompt not found'})
     else:
         return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+@login_required(login_url='/login/')
+def toggle_pin_category(request, category_id):
+    if request.method == 'POST':
+        try:
+            category = Category.objects.get(id=category_id)
+            if request.user in category.pinned_by.all():
+                category.pinned_by.remove(request.user)
+                is_pinned = False
+            else:
+                category.pinned_by.add(request.user)
+                is_pinned = True
+            return JsonResponse({'success': True, 'is_pinned': is_pinned})
+        except Category.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Category not found'})
+    else:
+        return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
 
 
 # for apis
